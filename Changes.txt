@@ -1,0 +1,2 @@
+Vers. 0.10	2006-Jun-2		D. Arnold
+	Coded.
