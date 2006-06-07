@@ -1,11 +1,17 @@
 package GD::Tiler;
 
 use GD;
+use Exporter;
+
+our @ISA = qw(Exporter);
+
+our @EXPORT = ();
+our @EXPORT_OK = qw(tile);
 
 use strict;
 use warnings;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 =pod
 
@@ -15,12 +21,12 @@ GD::Tiler - package to aggregate images into a single tiled image via GD
 
 =head1 SYNOPSIS
 
-	use GD::Tiler;
+	use GD::Tiler qw(tile);
 	#
 	#	use computed coordinates for layout, and retrieve the
-	#	coordinates for later use
+	#	coordinates for later use (as imported method)
 	#
-	my ($img, @coords) = GD::Tiler->tile(
+	my ($img, @coords) = tile(
 		Images => [ 'chart1.png', 'chart2.png', 'chart3.png', 'chart4.png'],
 		Background => 'lgray',
 		Center => 1,
@@ -29,7 +35,7 @@ GD::Tiler - package to aggregate images into a single tiled image via GD
 		VTileMargin => 5,
 		HTileMargin => 5);
 	#
-	#	use explicit coordinates for layout
+	#	use explicit coordinates for layout (as class method)
 	#
 	my $explimg = GD::Tiler->tile(
 		Images => [ 'chart1.png', 'chart2.png', 'chart3.png', 'chart4.png'],
@@ -46,16 +52,16 @@ GD::Tiler - package to aggregate images into a single tiled image via GD
 
 Creates a new tiled image from a set of input images. Various arguments
 may be specified to position individual images, or the default
-behaviors can be used to create a reasonable placement to fill a
+behaviors can be used to create an reasonable placement to fill a
 square image.
 
 =head1 METHODS
 
 Only a single method is provided:
 
-=head4 my $image = GD::Tiled->tile( %args )
+=head4 $image = GD::Tiler->tile( %args )
 
-=head4 my ($image, @coords) = GD::Tiled->tile( %args )
+=head4 ($image, @coords) = GD::Tiler->tile( %args )
 
 Returns a GD::Image object of the images specified in %args,
 positioned according to the directives in %arg. In array context,
@@ -154,6 +160,12 @@ their computed tile location; ignored if B<Coordinates> is specified.
 Default is false, which causes images to be anchored to the
 upper left corner of their tile.
 
+=item B<ImagesPerRow =E<gt>> C<$count> I<(optional)>
+
+Specifies the number of images per row in the layout; ignored if
+B<Coordinates> is also specified. Permits an alternate layout to
+the default approximate square layout.
+
 =back
 
 =head1 SEE ALSO
@@ -220,16 +232,23 @@ sub _dehex {
 #	compute coordinates for tiled images
 #
 sub _layout {
-	my ($center, $vedge, $hedge, $vtile, $htile, @images) = @_;
+	my ($center, $vedge, $hedge, $vtile, $htile, $imgsperrow,  @images) = @_;
 	my ($rows, $cols);
 
 	my $imgcnt = scalar @images;
-	$rows = $cols = int(sqrt($imgcnt));
-	unless (($rows * $cols) == $imgcnt) {
-
-		$cols++;
+	if (defined($imgsperrow)) {
+		$cols = $imgsperrow;
+		$rows = int($imgcnt/$cols);
 		$rows++
 			unless (($rows * $cols) >= $imgcnt);
+	}
+	else {
+		$rows = $cols = int(sqrt($imgcnt));
+		unless (($rows * $cols) == $imgcnt) {
+			$cols++;
+			$rows++
+				unless (($rows * $cols) >= $imgcnt);
+		}
 	}
 #
 #	compute width and height based on input images
@@ -366,6 +385,7 @@ sub tile {
 			$args{HEdgeMargin},
 			$args{VTileMargin},
 			$args{HTileMargin},
+			$args{ImagesPerRow},
 			@{$args{Images}});
 
 		die "Specified Width $args{Width} less than computed width of $w."
